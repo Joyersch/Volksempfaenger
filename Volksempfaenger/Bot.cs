@@ -75,13 +75,7 @@ public class Bot : BackgroundService
 
         IGuildUser u = (IGuildUser) user;
         if (!_settings.Roles.Any(r => u.RoleIds.Contains(r)))
-        {
-            _logger.LogInformation(
-                $"UserId:{0}, Name:{1} join voice without the special role. Server: {u.Guild.Id}"
-                , user.Id
-                , u.Nickname);
             return;
-        }
         
         ulong voiceId = after.VoiceChannel.Id;
         if (_connectedChannels.TryGetValue(voiceId, out _))
