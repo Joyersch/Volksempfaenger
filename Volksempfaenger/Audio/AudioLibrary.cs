@@ -32,5 +32,8 @@ public class AudioLibrary
         => Directory.GetFiles(_configuration.Path + $"/{guild.Id}/", pattern, SearchOption.AllDirectories);
 
     public string[] GetAudios(IGuild guild)
-        => Directory.GetFiles(_configuration.Path + $"/{guild.Id}/", "*.*", SearchOption.AllDirectories);
+        => GetAudios(guild.Id);
+    
+    public string[] GetAudios(ulong guild)
+        => Directory.GetFiles(_configuration.Path + $"/{guild}/", "*.*", SearchOption.AllDirectories);
 }
