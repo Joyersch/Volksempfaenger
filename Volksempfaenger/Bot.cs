@@ -22,8 +22,7 @@ public class Bot : BackgroundService
     private readonly AudioPlayer _player;
     private readonly AudioLibrary _library;
     private readonly Random _random;
-
-
+    
     public Bot(ILogger<Bot> logger, DiscordSocketClient client,
         IOptions<DiscordConfiguration> configuration,
         InteractionService commands, IServiceProvider services, IOptions<PermissionSettings> settings,
@@ -49,20 +48,34 @@ public class Bot : BackgroundService
 
         await _client.LoginAsync(TokenType.Bot, _configuration.Token);
         await _client.StartAsync();
-        _client.Ready += async () =>
-        {
-            foreach (ulong guildId in _settings.Guilds)
-            {
-                _logger.LogInformation("Registering for server: {0}", guildId);
-                await _commands.RegisterCommandsToGuildAsync(guildId);
-            }
-        };
+        _client.Ready += RegisterGuilds;
 
         while (!stoppingToken.IsCancellationRequested)
         {
             await _client.SetStatusAsync(UserStatus.DoNotDisturb);
 
             await Task.Delay(1000, stoppingToken);
+        }
+    }
+
+    private async Task RegisterGuilds()
+    {
+        foreach (ulong guildId in _settings.Guilds)
+        {
+            try
+            {
+                await _commands.RegisterCommandsToGuildAsync(guildId);
+                // Logging after registration in case of failure
+                _logger.LogInformation("Registering for server: {0}", guildId);
+                
+                // Create directory for guild in case it is not created yet
+                _library.CheckAndCreateDirectory(guildId);
+            }
+            catch (Exception ex)
+            {
+                // The exeption is most likely a "Missing Access" therefor ex.Message suffices
+                _logger.LogWarning("Unable to register server: {0}\n{1}", guildId, ex.Message);
+            }
         }
     }
 

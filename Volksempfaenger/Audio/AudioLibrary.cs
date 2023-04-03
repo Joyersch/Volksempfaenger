@@ -14,9 +14,12 @@ public class AudioLibrary
     }
 
     public void CheckAndCreateDirectory(IGuild guild)
+        => CheckAndCreateDirectory(guild.Id);
+
+    public void CheckAndCreateDirectory(ulong guild)
     {
-        if (!Directory.Exists(_configuration.Path + $"/{guild.Id}/"))
-            Directory.CreateDirectory(_configuration.Path + $"/{guild.Id}/");
+        if (!Directory.Exists(_configuration.Path + $"/{guild}/"))
+            Directory.CreateDirectory(_configuration.Path + $"/{guild}/");
     }
 
     public string GetFileName(IGuild guild, string pathToFile)
