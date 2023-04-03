@@ -102,9 +102,9 @@ public class Bot : BackgroundService
             {
                 string audioPath = allAudios[_random.Next(allAudios.Length)];
                 await _player.PlayAudioAsync(guild, audioClient, audioPath);
-                await audioClient.StopAsync();
-                audioClient.Dispose();
             }
+            await audioClient.StopAsync();
+            audioClient.Dispose();
         }
 
         if (_connectedChannels.TryGetValue(channel, out var observer))
