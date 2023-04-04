@@ -22,7 +22,7 @@ public class GetAudios : InteractionModuleBase<SocketInteractionContext>
     public async Task ListAsync()
     {
         IGuildUser user = (IGuildUser) Context.User;
-        
+
         if (!_settings.Roles.Any(r => user.RoleIds.Contains(r)))
         {
             _logger.LogInformation(
@@ -31,15 +31,32 @@ public class GetAudios : InteractionModuleBase<SocketInteractionContext>
                 , user.Nickname);
             return;
         }
-        
-        // ToDo: Write data directly into a steam and give that as a response (no interaction with the file system) if possible
-        string fileName = Context.Guild.Id + ".txt";
-        await using StreamWriter streamWriter = new StreamWriter(_library.GetFullFilePath(Context.Guild, fileName));
-        var lib = _library.GetAudios(Context.Guild);
 
-        foreach (var l in lib)
-            await streamWriter.WriteLineAsync(_library.GetFileName(Context.Guild, l));
+        await RespondAsync("Preparing file!");
+        string fileName = _library.GetFullFilePath(Context.Guild, Context.Guild.Id + ".txt");
+        try
+        {
+            // get files first otherwise the file will be listed as well
+            var files = _library.GetAudios(Context.Guild);
+            await using StreamWriter streamWriter = new StreamWriter(fileName);
 
-        await RespondWithFileAsync(fileName);
+            foreach (var file in files)
+                await streamWriter.WriteLineAsync(_library.GetFileName(Context.Guild, file));
+
+            // required to allow others to read the file
+            streamWriter.Close();
+
+            await FollowupWithFileAsync(fileName);
+        }
+        catch (Exception ex)
+        {
+            await FollowupAsync(ex.Message);
+        }
+        finally
+        {
+            // clean up
+            if (File.Exists(fileName))
+                File.Delete(fileName);
+        }
     }
 }
