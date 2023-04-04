@@ -73,6 +73,9 @@ public class Bot : BackgroundService
         if (after.VoiceChannel is null)
             return;
 
+        if (before.VoiceChannel.Id == after.VoiceChannel.Id)
+            return;
+        
         IGuildUser u = (IGuildUser) user;
         if (!_settings.Roles.Any(r => u.RoleIds.Contains(r)))
             return;
