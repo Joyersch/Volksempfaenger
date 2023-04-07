@@ -89,6 +89,8 @@ public class AudioPlayer
             await stream.FlushAsync();
         }
 
+        _logger.LogInformation("Finished playing audio!\nExit Code:{0}", ffmpeg.ExitCode);
+        
         await PlayerFinished?.Invoke(guild);
     }
 }

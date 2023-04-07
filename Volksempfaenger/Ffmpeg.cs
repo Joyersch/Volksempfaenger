@@ -6,10 +6,12 @@ namespace Volksempfaenger;
 
 public class Ffmpeg
 {
+    private readonly ILogger<Ffmpeg> _logger;
     private FfmpegConfiguration _configuration;
 
-    public Ffmpeg(IOptions<FfmpegConfiguration> settings)
+    public Ffmpeg(IOptions<FfmpegConfiguration> settings, ILogger<Ffmpeg> logger)
     {
+        _logger = logger;
         _configuration = settings.Value;
     }
 
