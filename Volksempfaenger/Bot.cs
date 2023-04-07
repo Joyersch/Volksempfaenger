@@ -31,22 +31,25 @@ public class Bot : BackgroundService
     public Bot(ILogger<Bot> logger, DiscordSocketClient client,
         IOptions<DiscordConfiguration> configuration,
         InteractionService commands, IServiceProvider services, IOptions<PermissionConfiguration> settings,
-        AudioLibrary library, AudioPlayer player, Random random, IOptions<BotBehaviourConfiguration> behaviourConfiguration)
+        AudioLibrary library, AudioPlayer player, Random random,
+        IOptions<BotBehaviourConfiguration> behaviourConfiguration)
     {
         _logger = logger;
         _client = client;
         _commands = commands;
         _configuration = configuration.Value;
+        _behaviourConfiguration = behaviourConfiguration.Value;
         _commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
         _services = services;
         _permissionConfiguration = settings.Value;
         _library = library;
         _player = player;
         _player.Connect += JoinedChannel;
-        _player.PlayerFinished += _player.LeaveChannel;
+        if (!_behaviourConfiguration.Debug.DisableLeave)
+            _player.PlayerFinished += _player.LeaveChannel;
         _random = random;
-        _behaviourConfiguration = behaviourConfiguration.Value;
     }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _client.Log += ClientLog;
@@ -71,11 +74,11 @@ public class Bot : BackgroundService
         // Do not follow bots
         if (user.IsBot)
             return;
-        
+
         // Do not join if a user leaves a channel
         if (after.VoiceChannel is null)
             return;
-        
+
         // Do not join if JoinOnMove (join on user swapping channels) is disabled & player is swapping.
         if (before.VoiceChannel is not null &&
             before.VoiceChannel.Guild.Id == after.VoiceChannel.Guild.Id &&
@@ -94,7 +97,7 @@ public class Bot : BackgroundService
         // no await in order to prevent a deadlock as this event is blocking the package channel
         _player.JoinChannel(u.Guild, after.VoiceChannel);
     }
-    
+
     private async Task JoinedChannel(IGuild guild, IAudioClient client)
     {
         var allAudios = _library.GetAudios(guild);
@@ -102,6 +105,7 @@ public class Bot : BackgroundService
         if (allAudios.Length > 0)
         {
             string audioPath = allAudios[_random.Next(allAudios.Length)];
+            _logger.LogInformation("Playing: {0}", audioPath);
             await _player.PlayAudioAsync(guild, audioPath);
         }
     }

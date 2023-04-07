@@ -62,7 +62,7 @@ public class Play : InteractionModuleBase<SocketInteractionContext>
         await RespondAsync($"Playing: `{_library.GetFileName(Context.Guild, audioPath)}`");
         await _player.JoinChannel(Context.Guild, context);
 
-        _player.PlayAudioAsync(Context.Guild, audioPath);
+        await _player.PlayAudioAsync(Context.Guild, audioPath);
     }
 
     [SlashCommand("play_specific", "play a specific audio")]

@@ -18,7 +18,6 @@ public class Cancel : InteractionModuleBase<SocketInteractionContext>
     {
         _logger = logger;
         _player = player;
-        _player.PlayerFinished += _player.LeaveChannel;
         _library = library;
         _random = random;
         _permissionConfiguration = settings.Value;
