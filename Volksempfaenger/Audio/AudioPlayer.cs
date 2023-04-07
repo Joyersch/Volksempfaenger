@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 using Discord;
 using Discord.Audio;
 using Discord.WebSocket;
@@ -14,7 +12,11 @@ public class AudioPlayer
     private readonly ConcurrentDictionary<ulong, IAudioClient> _connectedChannels;
     private readonly Ffmpeg _ffmpeg;
 
-    public event Func<IGuild, Task> OnPlayerFinished;
+    public event Func<IGuild, Task> PlayerFinished;
+    public event Func<IGuild, Task> Disconnect;
+
+    public event Func<IGuild, IAudioClient, Task> Connect;
+
 
     public AudioPlayer(ILogger<AudioPlayer> logger, DiscordSocketClient client, Ffmpeg ffmpeg)
     {
@@ -36,39 +38,57 @@ public class AudioPlayer
 
         if (_connectedChannels.TryAdd(guild.Id, audioClient))
             _logger.LogInformation($"Connected to voice on {guild.Name}.");
+
+        await Connect?.Invoke(guild, audioClient);
     }
 
     public async Task LeaveChannel(IGuild guild)
     {
         if (_connectedChannels.TryRemove(guild.Id, out IAudioClient client))
         {
-            await client.StopAsync();
+            try
+            {
+                await client.StopAsync();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(
+                    "Something when wrong while trying to leave a channel on {0}.\n{1}"
+                    , guild.Id, exception.Message);
+            }
+
             _logger.LogInformation($"Disconnected from voice on {guild.Name}.");
+            Disconnect?.Invoke(guild);
         }
     }
 
-    public async Task PlayAudioAsync(IGuild guild, string path)
+    public async Task PlayAudioAsync(IGuild guild, string audipPath)
     {
         if (_connectedChannels.TryGetValue(guild.Id, out IAudioClient client))
         {
-            await PlayAudioAsync(guild, client, path);
+            await PlayAudioAsync(guild, client, audipPath);
         }
     }
 
-    public async Task PlayAudioAsync(IGuild guild, IAudioClient client, string path)
+    public async Task PlayAudioAsync(IGuild guild, IAudioClient client, string audioPath)
     {
-        using var ffmpeg = _ffmpeg.CreateProcess(path);
+        using var ffmpeg = _ffmpeg.CreateProcess(audioPath);
 
         await using var stream = client.CreatePCMStream(AudioApplication.Music);
         try
         {
             await ffmpeg.StandardOutput.BaseStream.CopyToAsync(stream);
         }
+        catch (Exception exception)
+        {
+            _logger.LogWarning("Something when wrong while playing.\n {0}", exception.Message);
+            return;
+        }
         finally
         {
             await stream.FlushAsync();
         }
 
-        await OnPlayerFinished?.Invoke(guild);
+        await PlayerFinished?.Invoke(guild);
     }
 }

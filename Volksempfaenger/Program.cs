@@ -14,8 +14,9 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.Configure<DiscordConfiguration>(configuration.GetSection(nameof(DiscordConfiguration)));
         services.Configure<DiscordSocketConfig>(configuration.GetSection(nameof(DiscordSocketConfig)));
         services.Configure<FfmpegConfiguration>(configuration.GetSection(nameof(FfmpegConfiguration)));
-        services.Configure<PermissionSettings>(configuration.GetSection(nameof(PermissionSettings)));
+        services.Configure<PermissionConfiguration>(configuration.GetSection(nameof(PermissionConfiguration)));
         services.Configure<AudioLibraryConfiguration>(configuration.GetSection(nameof(AudioLibraryConfiguration)));
+        services.Configure<BotBehaviourConfiguration>(configuration.GetSection(nameof(BotBehaviourConfiguration)));
 
         services.AddSingleton<DiscordSocketClient>();
         services.AddSingleton(serviceProvider =>

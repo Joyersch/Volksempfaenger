@@ -1,6 +1,6 @@
 namespace Volksempfaenger.Configurations;
 
-public class PermissionSettings
+public class PermissionConfiguration
 {
     public ulong[] Roles { get; set; }
 
