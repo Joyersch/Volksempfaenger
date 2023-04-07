@@ -33,8 +33,16 @@ public class AudioPlayer
 
         if (target.Guild.Id != guild.Id)
             return;
-
-        var audioClient = await target.ConnectAsync();
+        IAudioClient? audioClient = null;
+        try
+        {
+            audioClient = await target.ConnectAsync();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning("Unable to connect to Voice\n{0}", exception.Message);
+            return;
+        }
 
         if (_connectedChannels.TryAdd(guild.Id, audioClient))
             _logger.LogInformation($"Connected to voice on {guild.Name}.");
