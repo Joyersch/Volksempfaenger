@@ -72,13 +72,14 @@ public class Bot : BackgroundService
         if (user.IsBot)
             return;
         
+        // Do not join if a user leaves a channel
+        if (after.VoiceChannel is null)
+            return;
+        
+        // Do not join if JoinOnMove (join on user swapping channels) is disabled & player is swapping.
         if (before.VoiceChannel is not null &&
             before.VoiceChannel.Guild.Id == after.VoiceChannel.Guild.Id &&
             !_behaviourConfiguration.Audio.JoinOnMove)
-            return;
-        
-        // Do not join if a user leaves a channel
-        if (after.VoiceChannel is null)
             return;
 
         // Do not join no channel was swapped
