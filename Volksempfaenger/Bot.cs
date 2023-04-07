@@ -45,8 +45,6 @@ public class Bot : BackgroundService
         _library = library;
         _player = player;
         _player.Connect += JoinedChannel;
-        if (!_behaviourConfiguration.Debug.DisableLeave)
-            _player.PlayerFinished += _player.LeaveChannel;
         _random = random;
     }
 
@@ -94,19 +92,24 @@ public class Bot : BackgroundService
         if (!_permissionConfiguration.Roles.Any(r => u.RoleIds.Contains(r)))
             return;
 
+        _logger.LogDebug("Preparing to follow user!");
+
         // no await in order to prevent a deadlock as this event is blocking the package channel
         _player.JoinChannel(u.Guild, after.VoiceChannel);
     }
 
     private async Task JoinedChannel(IGuild guild, IAudioClient client)
     {
+        _logger.LogDebug("Preparing audio to play!");
         var allAudios = _library.GetAudios(guild);
 
         if (allAudios.Length > 0)
         {
             string audioPath = allAudios[_random.Next(allAudios.Length)];
             _logger.LogInformation("Playing: {0}", audioPath);
-            await _player.PlayAudioAsync(guild, audioPath);
+            await _player.PlayAudioAsync(guild, audioPath, false);
+            if (!_behaviourConfiguration.Debug.DisableLeave)
+                await _player.LeaveChannel(guild, false);
         }
     }
 

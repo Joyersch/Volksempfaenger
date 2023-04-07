@@ -11,15 +11,17 @@ public class Play : InteractionModuleBase<SocketInteractionContext>
     private readonly AudioPlayer _player;
     private readonly AudioLibrary _library;
     private readonly Random _random;
+    private readonly BotBehaviourConfiguration _botBehaviourConfiguration;
     private readonly PermissionConfiguration _permissionConfiguration;
 
     public Play(ILogger<Play> logger, AudioPlayer player, AudioLibrary library, Random random,
-        IOptions<PermissionConfiguration> settings)
+        IOptions<PermissionConfiguration> settings, IOptions<BotBehaviourConfiguration> botBehaviourConfiguration)
     {
         _logger = logger;
         _player = player;
         _library = library;
         _random = random;
+        _botBehaviourConfiguration = botBehaviourConfiguration.Value;
         _permissionConfiguration = settings.Value;
     }
 
@@ -45,7 +47,7 @@ public class Play : InteractionModuleBase<SocketInteractionContext>
             return;
         }
         
-        _logger.LogInformation("Running play");
+        _logger.LogDebug("Preparing audio to play.");
 
         _library.CheckAndCreateDirectory(Context.Guild);
 
@@ -56,13 +58,12 @@ public class Play : InteractionModuleBase<SocketInteractionContext>
 
         string audioPath = allAudios[_random.Next(allAudios.Length)];
 
+        _logger.LogDebug("prepared audio file: {0}", audioPath);
+        
         _logger.LogInformation("Playing: " + audioPath);
 
-        await _player.LeaveChannel(Context.Guild);
         await RespondAsync($"Playing: `{_library.GetFileName(Context.Guild, audioPath)}`");
-        await _player.JoinChannel(Context.Guild, context);
-
-        await _player.PlayAudioAsync(Context.Guild, audioPath);
+        await PlayAudio(context, audioPath);
     }
 
     [SlashCommand("play_specific", "play a specific audio")]
@@ -78,22 +79,51 @@ public class Play : InteractionModuleBase<SocketInteractionContext>
                 , user.Nickname);
             return;
         }
+        
+        var context = ((IVoiceState) Context.User).VoiceChannel;
 
-        _logger.LogInformation("Running play");
-
-        _library.CheckAndCreateDirectory(Context.Guild);
-
-        if (!File.Exists(_library.GetFullFilePath(Context.Guild, audio)))
+        if (context is null)
         {
-            _logger.LogInformation($"Audio: '{audio}' does not exist!");
-            await RespondAsync($"That audio does not exists!");
+            await RespondAsync("No, you are not in a voice!");
             return;
         }
 
-        await _player.LeaveChannel(Context.Guild);
-        await RespondAsync($"Playing: `{audio}`");
-        await _player.JoinChannel(Context.Guild, ((IVoiceState) Context.User).VoiceChannel);
+        _logger.LogDebug("Preparing audio to play.");
 
-        await _player.PlayAudioAsync(Context.Guild, _library.GetFullFilePath(Context.Guild, audio));
+        _library.CheckAndCreateDirectory(Context.Guild);
+        
+        var allAudios = _library.GetAudios(Context.Guild);
+
+        if (allAudios.All(a => a != _library.GetFullFilePath(Context.Guild, audio)))
+        {
+            _logger.LogInformation("Audio: '{audio}' does not exist!", audio);
+            await RespondAsync("That audio does not exists!");
+            return;
+        }
+
+        _logger.LogDebug("prepared audio file: {0}", audio);
+        await RespondAsync($"Playing: `{audio}`");
+        await PlayAudio(context, _library.GetFullFilePath(Context.Guild, audio));
+    }
+
+    private async Task PlayAudio(IVoiceChannel context, string audioPath)
+    {
+        _logger.LogDebug("leave previous voice if in voice!");
+        await _player.LeaveChannel(Context.Guild);
+        
+        _logger.LogDebug("Joining Channel");
+        await _player.JoinChannel(Context.Guild, context, false);
+        _logger.LogDebug("Joined Channel");
+        
+        _logger.LogDebug("Playing Audio");
+        await _player.PlayAudioAsync(Context.Guild, audioPath, false);
+        _logger.LogDebug("Played Audio");
+
+        if (_botBehaviourConfiguration.Debug.DisableLeave)
+            return;
+        
+        _logger.LogDebug("Disconnecting from Audio");
+        await _player.LeaveChannel(Context.Guild, false);
+        _logger.LogDebug("Disconnected from Audio");
     }
 }

@@ -12,7 +12,7 @@ public class AudioPlayer
     private readonly ConcurrentDictionary<ulong, IAudioClient> _connectedChannels;
     private readonly Ffmpeg _ffmpeg;
 
-    public event Func<IGuild, Task> PlayerFinished;
+    public event Func<IGuild, bool, Task> PlayerFinished;
     public event Func<IGuild, Task> Disconnect;
 
     public event Func<IGuild, IAudioClient, Task> Connect;
@@ -26,7 +26,7 @@ public class AudioPlayer
         _ffmpeg = ffmpeg;
     }
 
-    public async Task JoinChannel(IGuild guild, IVoiceChannel target)
+    public async Task JoinChannel(IGuild guild, IVoiceChannel target, bool invoiceConnectEvent = true)
     {
         if (_connectedChannels.TryGetValue(guild.Id, out _))
             return;
@@ -39,10 +39,11 @@ public class AudioPlayer
         if (_connectedChannels.TryAdd(guild.Id, audioClient))
             _logger.LogInformation($"Connected to voice on {guild.Name}.");
 
-        await Connect?.Invoke(guild, audioClient);
+        if (invoiceConnectEvent)
+            await Connect?.Invoke(guild, audioClient);
     }
 
-    public async Task LeaveChannel(IGuild guild)
+    public async Task LeaveChannel(IGuild guild, bool invokeDisconnectEvent = true)
     {
         if (_connectedChannels.TryRemove(guild.Id, out IAudioClient client))
         {
@@ -58,19 +59,21 @@ public class AudioPlayer
             }
 
             _logger.LogInformation($"Disconnected from voice on {guild.Name}.");
-            Disconnect?.Invoke(guild);
+            if (invokeDisconnectEvent)
+                Disconnect?.Invoke(guild);
         }
     }
 
-    public async Task PlayAudioAsync(IGuild guild, string audipPath)
+    public async Task PlayAudioAsync(IGuild guild, string audioPath, bool invokePlayerFinishedEvent = true)
     {
         if (_connectedChannels.TryGetValue(guild.Id, out IAudioClient client))
         {
-            await PlayAudioAsync(guild, client, audipPath);
+            await PlayAudioAsync(guild, client, audioPath, invokePlayerFinishedEvent);
         }
     }
 
-    public async Task PlayAudioAsync(IGuild guild, IAudioClient client, string audioPath)
+    public async Task PlayAudioAsync(IGuild guild, IAudioClient client, string audioPath,
+        bool invokePlayerFinishedEvent = true)
     {
         using var ffmpeg = _ffmpeg.CreateProcess(audioPath);
 
@@ -90,7 +93,8 @@ public class AudioPlayer
         }
 
         _logger.LogInformation("Finished playing audio!\nExit Code:{0}", ffmpeg.ExitCode);
-        
-        await PlayerFinished?.Invoke(guild);
+
+        if (invokePlayerFinishedEvent)
+            await PlayerFinished?.Invoke(guild, true);
     }
 }
