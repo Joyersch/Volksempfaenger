@@ -9,13 +9,13 @@ public class GetAudios : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly ILogger<GetAudios> _logger;
     private readonly AudioLibrary _library;
-    private readonly PermissionSettings _settings;
+    private readonly PermissionConfiguration _permissionConfiguration;
 
-    public GetAudios(ILogger<GetAudios> logger, AudioLibrary library, IOptions<PermissionSettings> settings)
+    public GetAudios(ILogger<GetAudios> logger, AudioLibrary library, IOptions<PermissionConfiguration> settings)
     {
         _logger = logger;
         _library = library;
-        _settings = settings.Value;
+        _permissionConfiguration = settings.Value;
     }
 
     [SlashCommand("list", "List of audios for this server")]
@@ -23,7 +23,7 @@ public class GetAudios : InteractionModuleBase<SocketInteractionContext>
     {
         IGuildUser user = (IGuildUser) Context.User;
 
-        if (!_settings.Roles.Any(r => user.RoleIds.Contains(r)))
+        if (!_permissionConfiguration.Roles.Any(r => user.RoleIds.Contains(r)))
         {
             _logger.LogInformation(
                 $"UserId:{0}, Name:{1} tried to use /play without the special role. Server: {Context.Guild.Id}"
