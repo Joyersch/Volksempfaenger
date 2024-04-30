@@ -1,0 +1,11 @@
+[Unit]
+Description=Volksempfaenger
+
+[Service]
+WorkingDirectory=/home/joy/Bot/
+ExecStart=/home/joy/Bot/Volksempfaenger 
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=dafault.target
